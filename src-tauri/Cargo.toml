@@ -1,6 +1,6 @@
 [package]
 name = "bloomin8-desktop"
-version = "0.0.4"
+version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
