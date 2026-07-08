@@ -1,13 +1,18 @@
 # Bloomin8 Desktop
 
-[![Buy me a boba 🧋](https://img.shields.io/badge/Buy%20me%20a%20boba-%F0%9F%A7%8B-ff69b4?style=for-the-badge)](https://dopiz.bobaboba.me/)
+[![Give me a Boba!](https://img.shields.io/badge/Give%20me%20a-Boba%21-CCA78C?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://dopiz.bobaboba.me)
 
-A macOS / Windows desktop app that controls a **Bloomin8 colour e-ink Canvas**
+A macOS desktop app that controls a **Bloomin8 colour e-ink Canvas**
 directly over your LAN — **no cloud, no account, no sign-in**. Push photos and
 widgets, manage the device's gallery and playlists, and schedule recurring
 refreshes, all from a native app that lives in your tray.
 
-Built with **Tauri v2 (Rust) + React 19 + TypeScript + Tailwind v4**.
+Built with **Tauri v2 (Rust) + React 19 + TypeScript + Tailwind v4**, and
+crafted with Claude Code.
+
+<p align="center">
+  <img src="docs/demo/bloom8-desktop-demo.gif" alt="Bloomin8 Desktop demo" width="800">
+</p>
 
 ## Features
 
@@ -62,127 +67,6 @@ pnpm build              # frontend typecheck + build (tsc && vite build)
 cargo test --manifest-path src-tauri/Cargo.toml   # Rust unit tests (MockDevice, no hardware)
 ```
 
-## Releases (GitHub Actions)
-
-A single, **manual** workflow — [`.github/workflows/release.yml`](.github/workflows/release.yml).
-It never runs on push or PR; you trigger it yourself:
-
-**Actions → Release → Run workflow**, enter a version (e.g. `0.0.1`).
-
-It then, in one go:
-
-1. **Bumps the version** everywhere — `package.json`,
-   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` (+ `Cargo.lock`) — then
-   commits and tags it `vX.Y.Z`.
-2. **Builds** the app for **macOS** (universal `.dmg` / `.app`) and **Windows**
-   (`.msi` / NSIS `-setup.exe`).
-3. **Publishes a GitHub Release** for that tag with all the installers attached,
-   ready to download. (Uncheck "Publish now" to leave it as a draft first.)
-
-### Signing macOS builds in CI (optional)
-
-By default the CI build is **unsigned** (users right-click → Open on first
-launch). To have the release automatically **signed + notarized** so it opens
-with no Gatekeeper warning, add these repo secrets — the workflow already wires
-them into the build, and skips signing when they're absent:
-
-| Secret | How to get it |
-| --- | --- |
-| `APPLE_CERTIFICATE` | Export your **Developer ID Application** cert from Keychain as a `.p12`, then base64 it: `base64 -i cert.p12 \| pbcopy`. Requires an [Apple Developer](https://developer.apple.com/) account ($99/yr). |
-| `APPLE_CERTIFICATE_PASSWORD` | The password you set when exporting the `.p12`. |
-| `APPLE_SIGNING_IDENTITY` | `Developer ID Application: Your Name (TEAMID)` (see `security find-identity -v -p codesigning`). |
-| `APPLE_ID` | Your Apple account email. |
-| `APPLE_PASSWORD` | An **app-specific password** from [appleid.apple.com](https://appleid.apple.com) (not your login password). |
-| `APPLE_TEAM_ID` | Your 10-character Team ID. |
-
-Add them under **Settings → Secrets and variables → Actions → New repository
-secret**, then run the Release workflow again. (Windows signing needs a separate
-code-signing certificate and isn't wired up yet.)
-
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
-
-## Build / Release (macOS)
-
-`src-tauri/tauri.conf.json` sets `bundle.macOS.signingIdentity` to `null`, so
-`pnpm tauri build` always produces a working, **unsigned** (ad-hoc signed)
-`.app` and `.dmg` under `src-tauri/target/release/bundle/` — no Apple
-Developer account required to build and smoke-test locally:
-
-```sh
-pnpm tauri build
-# -> src-tauri/target/release/bundle/macos/bloomin8-desktop.app
-# -> src-tauri/target/release/bundle/dmg/bloomin8-desktop_<version>_aarch64.dmg
-```
-
-An unsigned build runs fine on the machine that built it, but macOS
-Gatekeeper will block it (or show the "unidentified developer" prompt) once
-it's downloaded on another Mac, and it cannot ship through any distribution
-channel that checks notarization. `Info.plist` (bundled from
-`src-tauri/Info.plist`, merged automatically because it sits next to
-`tauri.conf.json`) already declares `NSBluetoothAlwaysUsageDescription` /
-`NSBluetoothPeripheralUsageDescription` for the BLE wake feature, and
-`src-tauri/Entitlements.plist` has the hardened-runtime entitlements
-(`com.apple.security.network.client`, `com.apple.security.device.bluetooth`)
-needed once you sign for real.
-
-### Signing + notarizing (requires an Apple Developer ID)
-
-1. Set a signing identity — either export it as an env var Tauri reads
-   automatically, or set `bundle.macOS.signingIdentity` in
-   `tauri.conf.json`:
-
-   ```sh
-   export APPLE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)"
-   ```
-
-2. Build (this signs the `.app` with the hardened runtime + the
-   entitlements in `src-tauri/Entitlements.plist` since `signingIdentity`
-   is no longer `null`):
-
-   ```sh
-   pnpm tauri build
-   ```
-
-   Or sign an already-built bundle by hand:
-
-   ```sh
-   codesign --deep --force --options runtime \
-     --entitlements src-tauri/Entitlements.plist \
-     --sign "Developer ID Application: Your Name (TEAMID)" \
-     src-tauri/target/release/bundle/macos/bloomin8-desktop.app
-   ```
-
-3. Notarize with `notarytool` (needs an app-specific password or API key —
-   see `xcrun notarytool store-credentials`):
-
-   ```sh
-   ditto -c -k --keepParent \
-     src-tauri/target/release/bundle/macos/bloomin8-desktop.app \
-     /tmp/bloomin8-desktop.zip
-
-   xcrun notarytool submit /tmp/bloomin8-desktop.zip \
-     --keychain-profile "AC_PASSWORD" \
-     --wait
-   ```
-
-4. Staple the ticket so the app verifies offline (e.g. right after
-   download, before first launch):
-
-   ```sh
-   xcrun stapler staple src-tauri/target/release/bundle/macos/bloomin8-desktop.app
-   # for the DMG too, if distributing that:
-   xcrun stapler staple src-tauri/target/release/bundle/dmg/bloomin8-desktop_*.dmg
-   ```
-
-5. Verify:
-
-   ```sh
-   codesign --verify --deep --strict --verbose=2 src-tauri/target/release/bundle/macos/bloomin8-desktop.app
-   spctl --assess --type execute --verbose src-tauri/target/release/bundle/macos/bloomin8-desktop.app
-   ```
-
 ## Disclaimer
 
 This is an **unofficial, third-party community tool**. It is **not affiliated
@@ -197,7 +81,3 @@ any impact on your device, data, or network.
 It communicates directly with the Canvas over your local network using a
 **device protocol that is not guaranteed to be stable or publicly supported**;
 a firmware update may change or break it at any time.
-
----
-
-Made with 🧋 by me boba — <https://dopiz.bobaboba.me/>
