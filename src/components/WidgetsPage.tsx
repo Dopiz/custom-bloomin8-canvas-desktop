@@ -266,24 +266,37 @@ function WeatherCard() {
   const [geoState, setGeoState] = useState<AsyncState>("idle");
   const [geoError, setGeoError] = useState("");
 
-  // Auto-default to the OS location once on mount, but only when nothing is set
-  // yet — never overrides a value the user typed, and never re-prompts.
+  // Auto-default to the user's location once on mount, but only when nothing is
+  // set yet — never overrides a value the user typed. Prefer the precise OS
+  // location and fall back to coarse IP geolocation (no permission needed) so
+  // the fields still auto-fill when the OS location is unavailable — the same
+  // chain the "Use my location" button uses. Only a total failure leaves the
+  // fields empty, silently (no error shown for the automatic attempt).
   useEffect(() => {
     if (lat !== "" || lon !== "") return;
     let alive = true;
     setGeoState("busy");
-    currentLocation()
-      .then((loc) => {
-        if (!alive) return;
+    (async () => {
+      let loc: { lat: number; lon: number; city: string } | null = null;
+      try {
+        loc = await currentLocation();
+      } catch {
+        try {
+          loc = await ipGeolocation();
+        } catch {
+          loc = null;
+        }
+      }
+      if (!alive) return;
+      if (loc) {
         setLat(String(loc.lat));
         setLon(String(loc.lon));
         if (loc.city.trim()) setCity(loc.city.trim());
         setGeoState("success");
-      })
-      .catch(() => {
-        // Denied / unavailable / timeout: leave the fields empty, don't block.
-        if (alive) setGeoState("idle");
-      });
+      } else {
+        setGeoState("idle");
+      }
+    })();
     return () => {
       alive = false;
     };

@@ -324,9 +324,12 @@ function ScheduleForm({
   const geoAttempted = useRef(false);
   const toast = useToast();
 
-  // Default a weather schedule to the user's OS location: attempt once when the
-  // weather surface is shown with no coordinates set yet. Never overrides an
-  // existing (edited) location, and leaves the fields empty on denial/timeout.
+  // Default a weather schedule to the user's location: attempt once when the
+  // weather surface is shown with no coordinates set yet. Prefer the precise OS
+  // location and fall back to coarse IP geolocation (no permission needed) so
+  // the fields still auto-fill when the OS location is unavailable — the same
+  // chain the "Use my location" button uses. Never overrides an existing
+  // (edited) location; a total failure leaves the fields empty, silently.
   useEffect(() => {
     if (widget.kind !== "weather") return;
     if (geoAttempted.current) return;
@@ -334,19 +337,30 @@ function ScheduleForm({
     geoAttempted.current = true;
     let alive = true;
     setGeoState("busy");
-    currentLocation()
-      .then((loc) => {
-        if (!alive) return;
+    (async () => {
+      let loc: { lat: number; lon: number; city: string } | null = null;
+      try {
+        loc = await currentLocation();
+      } catch {
+        try {
+          loc = await ipGeolocation();
+        } catch {
+          loc = null;
+        }
+      }
+      if (!alive) return;
+      if (loc) {
+        const got = loc;
         setWidget((w) =>
           w.kind === "weather"
-            ? { ...w, lat: loc.lat, lon: loc.lon, city: loc.city.trim() || w.city }
+            ? { ...w, lat: got.lat, lon: got.lon, city: got.city.trim() || w.city }
             : w,
         );
         setGeoState("success");
-      })
-      .catch(() => {
-        if (alive) setGeoState("idle");
-      });
+      } else {
+        setGeoState("idle");
+      }
+    })();
     return () => {
       alive = false;
     };
