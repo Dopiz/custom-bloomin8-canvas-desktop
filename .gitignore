@@ -1,0 +1,30 @@
+.vscode/
+node_modules/
+dist/
+dist-ssr/
+build/
+.DS_Store
+*.local
+*.log
+logs
+
+# Tauri build output
+src-tauri/target/
+src-tauri/gen/
+
+# Editor
+.idea
+
+# Spike / capture outputs
+spike-output/
+.playwright-cli/
+
+# Design system reference (kept local, not tracked)
+design-system/
+
+# Claude Code local scratch / worktrees
+.claude/
+
+# Local secrets (Apple signing, etc.)
+.env
+.env.*

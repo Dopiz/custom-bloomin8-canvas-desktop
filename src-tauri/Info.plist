@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- S15/M5: BLE wake (SPEC §4.1.3-4) pulses the Bloomin8 panel awake over
+         Bluetooth before falling back to HTTP polling. macOS requires this
+         usage string before it will grant the app Bluetooth access; without
+         it the process is silently killed the first time it touches
+         CoreBluetooth. Both keys are set for compatibility across macOS
+         versions (NSBluetoothAlwaysUsageDescription is the modern key,
+         NSBluetoothPeripheralUsageDescription is the legacy pre-Big Sur one
+         still read by some frameworks). -->
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Bloomin8 uses Bluetooth to wake your e-ink Canvas frame from sleep before pushing images or refreshing widgets.</string>
+    <key>NSBluetoothPeripheralUsageDescription</key>
+    <string>Bloomin8 uses Bluetooth to wake your e-ink Canvas frame from sleep before pushing images or refreshing widgets.</string>
+    <!-- Weather widget defaults to your current location. macOS requires this
+         usage string before WKWebView's navigator.geolocation (Core Location)
+         will prompt for and return a position; without it the getCurrentPosition
+         call fails. When-in-use is sufficient — we only read the location once,
+         on demand, to prefill the weather coordinates. -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Bloomin8 uses your location to show local weather for your area.</string>
+</dict>
+</plist>

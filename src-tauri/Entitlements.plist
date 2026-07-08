@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- S15/M5: entitlements applied when the build is code-signed with the
+         hardened runtime (required for notarization, see README "Signing &
+         notarization"). The app is NOT App Sandboxed (no
+         com.apple.security.app-sandbox key) — it talks to an arbitrary
+         LAN IP the user types in and to CoreBluetooth, which is simplest
+         outside the sandbox. These two entitlements just make the intent
+         explicit and keep the door open for sandboxing later. -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.device.bluetooth</key>
+    <true/>
+</dict>
+</plist>

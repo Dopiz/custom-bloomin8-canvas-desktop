@@ -1,0 +1,19 @@
+<svg width="64" height="64" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .mark { fill: #111111; }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: #fafafa; }
+    }
+  </style>
+  <g transform="translate(512,512)" class="mark">
+    <ellipse cx="0" cy="-190" rx="92" ry="188"/>
+    <g transform="rotate(45)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <g transform="rotate(90)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <g transform="rotate(135)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <g transform="rotate(180)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <g transform="rotate(225)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <g transform="rotate(270)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <g transform="rotate(315)"><ellipse cx="0" cy="-190" rx="92" ry="188"/></g>
+    <circle cx="0" cy="0" r="96"/>
+  </g>
+</svg>

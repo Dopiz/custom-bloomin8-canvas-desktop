@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: `.dark` on <html> (driven by src/lib/theme.ts),
+   instead of Tailwind v4's default prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic tokens → Tailwind utilities (bg-bg, text-fg, border-border, …).
+   Components reference these, never raw hex. Light = :root, dark = .dark. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-inverse: var(--inverse);
+  --color-inverse-fg: var(--inverse-fg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-select: var(--select);
+  --color-ring: var(--select);
+}
+
+:root {
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #f2f2f3;
+  --inverse: #0a0a0a;
+  --inverse-fg: #fafafa;
+  --fg: #18181b;
+  --muted: #71717a;
+  --subtle: #a1a1aa;
+  --border: #e6e6e8;
+  --primary: #18181b;
+  --primary-fg: #ffffff;
+  --accent: #22c55e;
+  --accent-strong: #16a34a;
+  --accent-fg: #ffffff;
+  --danger: #dc2626;
+  --danger-fg: #ffffff;
+  /* Selection + focus-ring blue (thumbnails, input focus). */
+  --select: #3b82f6;
+
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark {
+  --bg: #0a0a0a;
+  --surface: #171717;
+  --surface-2: #262626;
+  --inverse: #000000;
+  --inverse-fg: #fafafa;
+  --fg: #fafafa;
+  --muted: #a1a1aa;
+  --subtle: #6b7280;
+  --border: #2a2a2a;
+  --primary: #fafafa;
+  --primary-fg: #0a0a0a;
+  --accent: #22c55e;
+  --accent-strong: #4ade80;
+  --accent-fg: #052e16;
+  --danger: #f87171;
+  --danger-fg: #450a0a;
+  --select: #60a5fa;
+
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+/* Tabular figures for data (battery %, sizes, timestamps). */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Honor reduced-motion globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Instant, flicker-free theme switch: `.theme-transition` is added to <html>
+   just for the moment the theme flips (see src/lib/theme.ts). Disabling every
+   element's transition during the swap makes the whole UI recolour at once —
+   no flicker (nothing animates out of sync) and nothing lagging behind (logos,
+   buttons, icons all change instantly). Normal hover/focus transitions resume
+   as soon as the class is removed. */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: none !important;
+}

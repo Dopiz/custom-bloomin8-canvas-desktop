@@ -1,0 +1,132 @@
+name: Release
+
+# Manual, one-click release: bump the version everywhere, tag it, build the
+# macOS bundle (Windows temporarily disabled), and publish a GitHub Release with
+# it attached — all from a single "Run workflow" click.
+#
+#   Actions -> Release -> Run workflow -> enter version (e.g. 0.2.0)
+#
+# `build.yml` stays as plain CI (artifacts only); this is the only workflow that
+# creates Releases.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.2.0 (no leading v)"
+        required: true
+      publish:
+        description: "Publish now (uncheck to leave it as a draft)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  # 1) Bump the version in every file that carries it, commit to main, and tag.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bump version (package.json, tauri.conf.json, Cargo.toml/lock)
+        id: bump
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"   # tolerate a leading "v"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          node -e "const f='package.json',p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+          node -e "const f='src-tauri/tauri.conf.json',p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+          # Cargo.toml: first `version = "..."` (the [package] one)
+          sed -i -E '0,/^version = ".*"/s//version = "'"$VERSION"'"/' src-tauri/Cargo.toml
+          # Cargo.lock: the version line right after our package's name entry
+          if [ -f src-tauri/Cargo.lock ]; then
+            sed -i -E '/^name = "bloomin8-desktop"$/{n;s/^version = ".*"/version = "'"$VERSION"'"/;}' src-tauri/Cargo.lock
+          fi
+
+      - name: Commit + tag
+        run: |
+          set -euo pipefail
+          V="${{ steps.bump.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+          git commit -m "chore: release v$V"
+          git tag "v$V"
+          git push origin HEAD:main
+          git push origin "v$V"
+
+  # 2) Build every platform against the tagged commit and upload to one Release.
+  release:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+            rust-targets: "aarch64-apple-darwin,x86_64-apple-darwin"
+          # Windows build temporarily disabled — uncomment to re-enable.
+          # - platform: windows-latest
+          #   args: ""
+          #   rust-targets: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare.outputs.version }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # tauri-action builds the frontend + bundles, then (because tagName is set)
+      # creates/updates the Release for that tag and uploads each platform's
+      # installers to it. In a matrix the first job creates the Release and the
+      # others attach to the same one.
+      - name: Build + publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing + notarization. tauri-action imports the cert
+          # and signs + notarizes automatically when these are set; when the
+          # secrets are absent they're empty and it falls back to an unsigned
+          # (ad-hoc) build, so this is safe to leave wired up. (Ignored on the
+          # Windows runner.)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          args: ${{ matrix.args }}
+          tagName: v${{ needs.prepare.outputs.version }}
+          releaseName: "Bloomin8 Desktop v${{ needs.prepare.outputs.version }}"
+          releaseDraft: ${{ !inputs.publish }}
+          prerelease: false
