@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.bump.outputs.version }}
+      notes: ${{ steps.notes.outputs.body }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,6 +61,24 @@ jobs:
           git tag "v$V"
           git push origin HEAD:main
           git push origin "v$V"
+
+      # Ask GitHub to auto-generate the release notes for this tag (grouped by
+      # PR, with a "Full Changelog" compare link to the previous tag). The tag
+      # must already be pushed (above). previous_tag_name is auto-detected.
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          V="${{ steps.bump.outputs.version }}"
+          BODY=$(gh api "repos/${{ github.repository }}/releases/generate-notes" \
+            -f tag_name="v$V" --jq .body)
+          {
+            echo "body<<__NOTES_EOF__"
+            echo "$BODY"
+            echo "__NOTES_EOF__"
+          } >> "$GITHUB_OUTPUT"
 
   # 2) Build every platform against the tagged commit and upload to one Release.
   release:
@@ -127,6 +146,7 @@ jobs:
         with:
           args: ${{ matrix.args }}
           tagName: v${{ needs.prepare.outputs.version }}
-          releaseName: "Bloomin8 Desktop v${{ needs.prepare.outputs.version }}"
+          releaseName: "v${{ needs.prepare.outputs.version }}"
+          releaseBody: ${{ needs.prepare.outputs.notes }}
           releaseDraft: ${{ !inputs.publish }}
           prerelease: false
