@@ -11,7 +11,7 @@ Built with **Tauri v2 (Rust) + React 19 + TypeScript + Tailwind v4**, and
 crafted with Claude Code.
 
 <p align="center">
-  <img src="docs/demo/bloom8-desktop-demo.gif" alt="Bloomin8 Desktop demo" width="800">
+  <img src="docs/demo/bloom8-desktop-demo-dark.gif" alt="Bloomin8 Desktop demo" width="800">
 </p>
 
 ## Features
