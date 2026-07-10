@@ -502,7 +502,11 @@ impl SchedulerManager {
         let widget = schedule.widget.clone();
         let on_result = self.on_result.clone();
 
-        let job = Job::new_async(schedule.cron.as_str(), move |_uuid, _lock| {
+        // `Job::new_async` hardcodes UTC; schedules are authored in the user's
+        // local wall-clock time, so pass the local timezone explicitly. The
+        // offset is captured when the job is (re)added, which happens on every
+        // schedule CRUD and app launch, so a DST shift self-corrects then.
+        let job = Job::new_async_tz(schedule.cron.as_str(), chrono::Local, move |_uuid, _lock| {
             let app = app.clone();
             let running = running.clone();
             let history_path = history_path.clone();
