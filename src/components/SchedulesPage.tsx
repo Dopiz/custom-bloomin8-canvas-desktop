@@ -430,6 +430,13 @@ function ScheduleForm({
       if (symbols.length === 0) return setError("at least one symbol is required");
       finalWidget = { ...finalWidget, symbols };
     }
+    if (finalWidget.kind === "countdown") {
+      finalWidget = {
+        ...finalWidget,
+        bg_query: finalWidget.bg_query.trim(),
+        bg_photo: finalWidget.bg_photo?.trim() || null,
+      };
+    }
     if (finalWidget.kind === "image" && finalWidget.library_id === "") {
       return setError("select an image from your library");
     }
@@ -586,6 +593,36 @@ function ScheduleForm({
               type="text"
               value={widget.title}
               onChange={(e) => setWidget({ ...widget, title: e.currentTarget.value })}
+            />
+          </Field>
+          <Field
+            label="Background art search (Met Museum)"
+            htmlFor="schedule-countdown-bg-query"
+            hint={
+              (widget.bg_photo ?? "").trim() !== ""
+                ? "Disabled while a local photo path is set"
+                : undefined
+            }
+          >
+            <Input
+              id="schedule-countdown-bg-query"
+              type="text"
+              value={widget.bg_query}
+              onChange={(e) => setWidget({ ...widget, bg_query: e.currentTarget.value })}
+              placeholder="van gogh landscape"
+              disabled={(widget.bg_photo ?? "").trim() !== ""}
+            />
+          </Field>
+          <Field
+            label="Local photo path (optional — skips the art search/network)"
+            htmlFor="schedule-countdown-bg-photo"
+          >
+            <Input
+              id="schedule-countdown-bg-photo"
+              type="text"
+              value={widget.bg_photo ?? ""}
+              onChange={(e) => setWidget({ ...widget, bg_photo: e.currentTarget.value })}
+              placeholder="/Users/me/Pictures/anniversary.jpg"
             />
           </Field>
         </div>
