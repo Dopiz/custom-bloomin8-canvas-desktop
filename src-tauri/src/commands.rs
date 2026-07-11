@@ -124,7 +124,11 @@ pub fn save_config(app: AppHandle, config: AppConfig) -> Result<(), String> {
 #[tauri::command]
 pub async fn device_info(app: AppHandle) -> Result<DeviceInfo, String> {
     let client = active_client(&app)?;
-    client.info().await.map_err(|e| e.to_string())
+    let info = client.info().await.map_err(|e| e.to_string())?;
+    // Passively refresh the tray tooltip from info the UI already asked for
+    // (the tray itself never polls or wakes the device).
+    crate::tray::note_device_info(&app, &info);
+    Ok(info)
 }
 
 #[tauri::command]
