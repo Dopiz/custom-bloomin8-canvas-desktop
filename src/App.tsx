@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import "./App.css";
 import {
-  deviceWake,
   errorMessage,
   fetchDeviceInfo,
   getConfig,
@@ -125,14 +124,11 @@ function Shell() {
 
   // The active device's live settings name (`/deviceInfo.name`), kept as the
   // single source of truth so the sidebar switcher matches the Device page
-  // hero. Fetched on device switch/startup; the Device page reports fresh names
-  // (e.g. after a rename) via `onDeviceName` so the switcher never goes stale.
+  // hero. Refreshed (without waking the device) on device switch/startup; the
+  // Device page reports fresh names (e.g. after a rename) via `onDeviceName`
+  // so the switcher never goes stale.
   const [activeDeviceName, setActiveDeviceName] = useState<string | null>(null);
   const [showAddDevice, setShowAddDevice] = useState(false);
-  // The device currently being woken over BLE in the background (device select /
-  // startup). Drives the sidebar switcher's "connecting" spinner; cleared when
-  // the wake resolves (success or failure — a failed wake just means offline).
-  const [wakingId, setWakingId] = useState<string | null>(null);
 
   /** Persist a freshly-observed `/deviceInfo` name onto the config entry so the
    * stored `name` auto-tracks the device (#6). No-op if unchanged. */
@@ -152,30 +148,14 @@ function Shell() {
     });
   }
 
-  /** Wake `id` over BLE in the background (non-blocking). On success, refresh
-   * `/deviceInfo` so the name syncs and the switcher shows the live name. A
-   * failed wake just clears the spinner — the device is treated as offline. */
-  function backgroundWake(id: string) {
-    setWakingId(id);
-    deviceWake()
-      .then(() => fetchDeviceInfo())
-      .then((info) => {
-        const name = typeof info.name === "string" ? info.name : "";
-        setActiveDeviceName(name || null);
-        if (name) persistDeviceName(id, name);
-      })
-      .catch(() => {})
-      .finally(() => setWakingId((cur) => (cur === id ? null : cur)));
-  }
-
   useEffect(() => {
     getConfig()
       .then((cfg) => {
         setConfig(cfg);
         const active = resolveActiveId(cfg);
         setActiveDeviceKey(active ?? "");
-        // Kick off a background wake for the initially-active device.
-        if (active) backgroundWake(active);
+        // The `activeId` effect below refreshes `/deviceInfo` (without waking
+        // the device) once `config` lands — no explicit refresh needed here.
       })
       .catch((e) => toast.show("error", errorMessage(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,8 +192,8 @@ function Shell() {
     if (!config || id === activeId) return;
     try {
       await applyConfig({ ...config, active_device_id: id });
-      // Auto-wake the newly-selected device in the background (non-blocking).
-      backgroundWake(id);
+      // Switching active devices changes `activeId`, so the effect above
+      // refreshes `/deviceInfo` (without waking the device) on its own.
     } catch (e) {
       toast.show("error", errorMessage(e));
     }
@@ -237,8 +217,8 @@ function Shell() {
       active_device_id: entry.id,
     });
     toast.show("success", "Device added");
-    // Wake the just-added device in the background so it comes online promptly.
-    backgroundWake(entry.id);
+    // The new device becomes active, so the `activeId` effect refreshes its
+    // `/deviceInfo` (without waking it) on its own.
   }
 
   async function deleteDevice(id: string) {
@@ -301,7 +281,6 @@ function Shell() {
           devices={config?.devices ?? []}
           activeId={activeId}
           liveName={activeDeviceName}
-          waking={wakingId !== null && wakingId === activeId}
           onSwitch={switchDevice}
           onDelete={deleteDevice}
           onAdd={addDevice}

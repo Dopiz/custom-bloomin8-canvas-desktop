@@ -11,7 +11,7 @@ import {
 import type { DeviceEntry } from "../types";
 import { bleScan, errorMessage } from "../api/device";
 import ConfirmDialog from "./ConfirmDialog";
-import { Button, Field, Input, Spinner, cx } from "./ui";
+import { Button, Field, Input, cx } from "./ui";
 
 /** Data collected by the add-device dialog: the LAN IP, the user's BLE match
  * hint, and the real device name resolved from a BLE scan (or the hint/IP when
@@ -30,9 +30,6 @@ interface DeviceSwitcherProps {
    * the parent so it stays in sync with the Device page hero even after a
    * rename. `null` when unknown/unreachable — falls back to the config name. */
   liveName: string | null;
-  /** True while the active device is being woken over BLE in the background —
-   * shows a lightweight "connecting" spinner in place of the caret. */
-  waking?: boolean;
   onSwitch: (id: string) => void | Promise<void>;
   onDelete: (id: string) => void | Promise<void>;
   onAdd: (data: AddDeviceData) => void | Promise<void>;
@@ -45,7 +42,6 @@ export default function DeviceSwitcher({
   devices,
   activeId,
   liveName,
-  waking = false,
   onSwitch,
   onDelete,
   onAdd,
@@ -91,13 +87,7 @@ export default function DeviceSwitcher({
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">
           {liveName || active?.name || active?.lan_ip || "No device"}
         </span>
-        {waking ? (
-          <span className="flex shrink-0 items-center" title="Connecting…">
-            <Spinner size={14} />
-          </span>
-        ) : (
-          <ChevronsUpDown size={15} className="shrink-0 text-subtle" aria-hidden />
-        )}
+        <ChevronsUpDown size={15} className="shrink-0 text-subtle" aria-hidden />
       </button>
 
       {open && (
